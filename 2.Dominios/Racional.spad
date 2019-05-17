@@ -1,0 +1,54 @@
+)abbrev domain RAC Racional
+
+++ Dominio de los números racionales
+Racional : Exports == Implementation where 
+
+	 Exports == with
+		rac:(Integer,Integer) -> $
+		racional:(Integer,Integer) -> $
+	 	racional:Integer -> $
+	 	numerador:$ -> Integer
+		denominador:$ -> Integer
+		producto:($,$) -> $
+		division:($,$) -> $
+		suma:($,$) -> $
+		resta:($,$) -> $
+		simplifica:$ -> $
+
+	 Implementation == add
+	 	Rep:=Record(num:Integer,den:Integer)
+		rac (m,n) == construct(m,n)::$
+		racional (m,n) == 
+			x:=rac(m,n)
+			x:=simplifica(x)
+		racional (m) == construct(m,1)::$
+		numerador (q) == (q::Rep).num
+		denominador (q) == (q::Rep).den
+		producto (p,q) == 
+			denominadorR:=denominador(p)*denominador(q)
+			numeradorR:=numerador(p)*numerador(q)
+			racional(numeradorR,denominadorR)
+		division (p,q) == 
+			denominadorR:=denominador(p)*numerador(q)
+			numeradorR:=numerador(p)*denominador(q)
+			mcd:=gcd(denominadorR,numeradorR)
+			racional(numeradorR,denominadorR)
+		suma (p,q) == 
+			denominadorR:=denominador(p)*denominador(q)
+			rac1:=numerador(p)*denominador(q)
+			rac2:=numerador(q)*denominador(p)
+			sum:=rac1+rac2
+			racional(sum,denominadorR)
+		resta (p,q) == 
+			denominadorR:=denominador(p)*denominador(q)
+			rac1:=numerador(p)*denominador(q)
+			rac2:=numerador(q)*denominador(p)
+			res:=rac1-rac2
+			racional(res,denominadorR)
+		simplifica (q) == 
+			mcd:=gcd(numerador(q),denominador(q))
+			aux1:=divide(numerador(q),mcd)
+			numeradorR:=aux1.quotient
+			aux2:=divide(denominador(q),mcd)
+			denominadorR:=aux2.quotient
+			construct(numeradorR,denominadorR)::$

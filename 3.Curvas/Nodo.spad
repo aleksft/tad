@@ -1,0 +1,252 @@
+)abbrev domain NOD Nodo
+
+--Dominio de los nodos del árbol
+--contiene el número de componente excepcional, la multiplicidad
+--y la componente excepcional
+Nodo : Exports == Implementation where 
+	 Exports == SetCategory with
+		nodo:(Integer,Symbol,Integer,Polynomial AlgebraicNumber,Point AlgebraicNumber,List AlgebraicNumber,List Expression AlgebraicNumber) -> $
+		equal:($,$) -> Boolean
+		numComp:$ -> Integer
+		componente:$ -> Symbol
+		multiplicidad:$ -> Integer
+		polinomio:$ -> Polynomial AlgebraicNumber
+		punto:$ -> Point AlgebraicNumber
+		lista:$ -> List AlgebraicNumber
+		polString:$ -> String
+		pointString:$ -> String
+		listString:$ -> String
+		string:$ -> List String
+		nombreNodo:$ -> String
+		coordenadas:$ -> List Expression AlgebraicNumber
+		expresion:(Symbol,Symbol) -> Expression AlgebraicNumber
+		calcularCoordenadas:($,Point AlgebraicNumber,Symbol) -> List Expression AlgebraicNumber
+
+		--OPERACIONES de SetCategory
+		"=" :($,$) -> Boolean
+		hash:$ -> SingleInteger
+		"~=" :($,$) -> Boolean
+		coerce:$ -> OutputForm
+		latex:$ -> String
+
+	 Implementation == add
+	 	--Representación del nodo del árbol como un registro
+		Rep:=Record(nc:Integer,comp:Symbol,mult:Integer,f:Polynomial AlgebraicNumber,p:Point AlgebraicNumber,LNA:List AlgebraicNumber,coord:List Expression AlgebraicNumber)
+
+		
+		--Constructor del nodo del árbol
+		nodo (i,s,m,g,q,lN,lCoor) == construct(i,s,m,g,q,lN,lCoor)::$
+
+
+		--Decide si dos nodos son iguales
+		equal (n,m) == 
+		      nc1:=numComp(n)
+		      nc2:=numComp(m)
+		      c1:=componente(n)
+		      c2:=componente(m)
+		      m1:=multiplicidad(n)
+		      m2:=multiplicidad(m)
+		      if ((nc1=nc2)and(c1=c2)and(m1=m2)) then
+		      	    b:=true
+		      else
+			    b:=false
+		      bool:=b
+
+
+		--Número de la componente excepcional correspondiente
+		numComp (q) == q.nc
+
+
+		--Componente excepcional: q.comp = 0
+		componente (q) == q.comp
+
+
+		--Multiplicidad de la curva
+		multiplicidad (q) == q.mult
+
+
+		--Polinomio que se encuentra en la componente excepcional
+		polinomio (q) == q.f
+
+
+		--Punto singular que se ha convertido en ek (0,0)
+		punto (n) == n.p
+
+
+		--Lista de números algebráicos
+		lista (n) == n.LNA
+
+
+		--String del polinomio
+		polString (q) == 
+		      P:=polinomio(q)
+		      lm:=monomials(P)
+		      lc:=coefficients(P)
+		      maxLm:=maxIndex(lm)
+		      cadena:=[]::List Character
+		      if maxLm=0 then
+		            cadena:=entries("0")
+		      while maxLm>0 repeat
+		      	    m:=lm.1
+		      	    lm:=delete(lm,1)
+		      	    c:=lc.1
+		      	    lc:=delete(lc,1)
+		      	    mn:=(m/c)::Polynomial AlgebraicNumber
+		      	    ex:=eval(mn,x,1)
+		      	    ey:=eval(mn,y,1)
+		      	    grEx:=totalDegree(ex)
+		      	    grEy:=totalDegree(ey)
+			    if c>0 then
+				  cadena:=concat(cadena,entries("+"))
+			    if (not(c=1))and(not(c=-1)) then
+			          d:=convert(c)::Float
+			    	  s:=convert(d)::String
+			    	  cadena:=concat(cadena,entries(s))
+			    if (c=-1)and((grEx>0)or(grEy>0)) then 
+			          cadena:=concat(cadena,entries("-"))
+			    if (grEx=0)and(grEy=0)and((c=1)or(c=-1)) then
+			          d:=convert(c)::Float
+				  s:=convert(d)::String
+				  cadena:=concat(cadena,entries(s))
+			    if grEx>0 then
+			          if not(grEx=1) then
+				        monStr1:=concat(["y^",string(grEx)])::String
+				  else
+				        monStr1:=concat(["y"])::String
+				  if (not(c=1))and(not(c=-1)) then
+					cadena:=concat(cadena,entries("*"))
+				  cadena:=concat(cadena,entries(monStr1))
+			    if grEy>0 then
+			          if not(grEy=1)then
+				        monStr2:=concat(["x^",string(grEy)])::String
+				  else
+				        monStr2:=concat(["x"])::String
+				  if not((c=1)or(c=-1))or(grEx>0) then
+				        cadena:=concat(cadena,entries("*"))
+				  cadena:=concat(cadena,entries(monStr2))
+			    maxLm:=maxIndex(lm)
+		      if cadena.1=entries("+").1 then
+		            cadena:=delete(cadena,1)
+		      str:=construct(cadena)
+
+
+		--Devuelve el cambio de  coordenadas realizado
+		pointString (n) == 
+		      punt:=punto(n)
+		      L:=entries(punt)::List AlgebraicNumber
+		      listStr:=entries("(")
+		      listStr:=concat(listStr,entries("x"))
+		      c:=L.1::AlgebraicNumber
+		      if c>0 then
+			    listStr:=concat(listStr,entries("+"))
+		      if not(c=0) then
+		      	    d:=convert(c)::Float
+		      	    s:=convert(d)::String
+		      	    listStr:=concat(listStr,entries(s))
+		      listStr:=concat(listStr,entries(", "))
+		      listStr:=concat(listStr,entries("y"))
+		      c:=L.2::AlgebraicNumber
+		      if c>0 then
+			    listStr:=concat(listStr,entries("+"))
+		      if not(c=0) then
+		            d:=convert(c)::Float
+		      	    s:=convert(d)::String
+		      	    listStr:=concat(listStr,entries(s))
+		      listStr:=concat(listStr,entries(")"))
+		      str:=construct(listStr)
+
+
+		--Devuelve la lista de números algebráicos
+		listString (n) ==
+		      lNA:=lista(n)
+		      listStr:=entries("[")
+		      ml:=maxIndex(lNA)
+		      k:=1::PositiveInteger
+		      while k<=ml repeat
+		      	    a:=lNA.coerce(k)
+		      	    d:=convert(a)::Float
+		      	    s:=convert(d)::String
+		      	    listStr:=concat(listStr,entries(s))
+			    k:=k+1
+		      	    if k<=ml then
+		                  listStr:=concat(listStr,entries(", "))
+		      listStr:=concat(listStr,entries("]"))
+		      str:=construct(listStr)
+
+
+		--Devuelve toda la información del nodo en una lista de String
+		string (n) == 
+	   	      if numComp(n)=-1 then
+		            listStr:=["r"]
+		      else
+		            listStr:=["[nc = ",string(numComp(n)),", comp = "]
+		      	    listStr:=concat(listStr,[string(componente(n)),", mult = "])
+		      	    listStr:=concat(listStr,[string(multiplicidad(n)),", f = "])
+		      	    listStr:=concat(listStr,[polString(n),", coordenadas = "])
+			    listStr:=concat(listStr,[pointString(n),", N. alg. = "])
+			    listStr:=concat(listStr,[listString(n)," ]"])
+
+
+		--Devuelve ["n",número de componente del nodo] si el número de componente del 
+		--nodo no es -1, si el número de componente es -1, devuelve ["r"] 
+		nombreNodo (m) == 
+		      ncm:=numComp(m)
+		      if ncm>=0 then 
+			    str:=concat("n",string(ncm))
+		      else
+			    str:="r"
+		      str:=concat("n",string(ncm))
+
+
+		--Devuelve la transformación inversa
+		coordenadas (n) == n.coord
+
+
+		--Calcula la expresión resultante de dividir un símbolo por otro
+		expresion (a,b) == 
+		      aexp:=a::Expression AlgebraicNumber
+		      bexp:=b::Expression AlgebraicNumber
+		      expfin:=(aexp/bexp)::Expression AlgebraicNumber
+
+
+		--Calcula la transformación inversa
+		calcularCoordenadas (n,paux,c) == 
+      		      lisC:=coordenadas(n)
+      		      PX:=(x::Symbol)::Expression AlgebraicNumber
+      		      PY:=(y::Symbol)::Expression AlgebraicNumber
+      		      lexp:=[PX,PY]
+      		      Lpaux:=entries(paux)
+      		      symaux:=x::Symbol
+		      punt1:=Lpaux.1::Expression AlgebraicNumber
+		      punt2:=Lpaux.2::Expression AlgebraicNumber
+      		      if c=symaux then
+			    var1:=(x::Symbol)::Expression AlgebraicNumber
+			    var2:=expresion(y,x)
+      		      else
+		            var1:=expresion(x,y)
+			    var2:=(y::Symbol)::Expression AlgebraicNumber
+      		      cooraux1:=(var1+punt1)::Expression AlgebraicNumber
+      	    	      cooraux2:=(var2+punt2)::Expression AlgebraicNumber
+		      l:=[cooraux1,cooraux2]
+      		      P1:=eval(lisC.1,lexp,l)::Expression AlgebraicNumber
+      		      P2:=eval(lisC.2,lexp,l)::Expression AlgebraicNumber
+      		      resultado:=[P1,P2]
+
+
+		--OPERACIONES de SetCategory
+		--
+		m = n == equal(m,n)
+
+		hash (n) == 
+		      str:=latex(n)
+		      hs:=hash(str)
+
+		m ~= n == not equal(m,n)
+
+		coerce (n) == 
+		      str:=latex(n)
+		      ouf:=outputForm(str)
+
+		latex (n) == 
+		      str := string(n)
+		      lat:=concat(str)

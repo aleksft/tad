@@ -1,0 +1,154 @@
+IMatrix(n:PI):Matrix AlgebraicNumber == (scalarMatrix(1)$SquareMatrix(n,AN))
+
+
+xMatrix(M:Matrix AN,x:Symbol):Matrix Polynomial AlgebraicNumber == 
+	n:=ncols(M)
+	xMatrix(M,x,n)
+
+
+xMatrix(M:Matrix AN,x:Symbol,n:PI):Matrix Polynomial AlgebraicNumber == x*IMatrix(n)-M
+
+
+xMatrixAut(M:Matrix AN,valor:AN):Matrix AlgebraicNumber == 
+	n:=ncols(M)
+	xMatrixAut(M,valor,n)
+
+
+xMatrixAut(M:Matrix AN,valor:AN,n:PI):Matrix AlgebraicNumber == valor*IMatrix(n)-M
+
+
+vectorDim(n:PI):Vector Polynomial AlgebraicNumber ==
+	v:=[x0,x1,x2,x3,x4,x5,x6,x7,x8,x9]
+	v:=reverse!(last(reverse!(v),n))
+	t:=vector(v)::Vector Polynomial AlgebraicNumber
+
+
+matrixDim(n:PI):Matrix Polynomial AlgebraicNumber == t:=vectorDim(n)::Matrix Polynomial AlgebraicNumber
+
+
+polinomioCaracteristico(M:Matrix AN):Polynomial AlgebraicNumber == 
+	n:=nrows(M)::PositiveInteger
+	B:=xMatrix(M,x,n)
+	d:=determinant(B)
+
+
+listaAutovalores(M:Matrix AN):List AlgebraicNumber ==
+	n:=nrows(M)::PositiveInteger
+	d:=polinomioCaracteristico(M)
+	f:=factors(factor(d))
+	m:=maxIndex(f)
+	listaAux:=[]::List AlgebraicNumber
+	k:=1
+	while k<=m repeat
+		pol:=f.coerce(k).factor
+		r:=rootsOf(pol)
+		listaAux:=concat(listaAux,r)
+		k:=k+1
+	resultado:=listaAux
+
+
+ecuacionAutovalor(M:Matrix AN,valor:AN):List Equation Polynomial AlgebraicNumber ==
+	n:=nrows(M)::PositiveInteger
+	v:=vectorDim(n)
+	t:=v::Matrix Polynomial AlgebraicNumber
+	I:=IMatrix(n)
+	Q:=(M-valor*I)*t
+	k:=1
+	P:=[]::List Equation Polynomial AlgebraicNumber
+	while k<=n repeat
+		P:=concat(P,[Q(coerce(k),1)=v.coerce(k)])
+	      	k:=k+1
+	E:=P::List Equation Polynomial AlgebraicNumber
+
+
+sigElemPol(E:List Equation Polynomial AN,vpol:Polynomial AN):Polynomial AlgebraicNumber == 
+	d:=1
+	while (d<=maxIndex(E))and(lhs(E.coerce(d))~=vpol)and(rhs(E.coerce(d))~=vpol) repeat
+	      	d:=d+1
+	if (rhs(E.coerce(d))~=vpol) then
+		valor:=rhs(E.coerce(d))::Polynomial AlgebraicNumber
+	else
+		valor:=lhs(E.coerce(d))::Polynomial AlgebraicNumber
+	retorno:=valor
+
+
+listaEval(L:List Equation Polynomial AN):List List Polynomial AlgebraicNumber == 
+	numEq:=maxIndex(L)
+	k:=1
+	lVar:=[]::List Polynomial AlgebraicNumber
+	lValor:=[]::List Polynomial AlgebraicNumber
+	while (k<=numEq) repeat
+		pol:=rhs(L.coerce(k))
+		if (totalDegree(pol)~=0) then
+			var:=rhs(L.coerce(k))
+			valor:=lhs(L.coerce(k))
+			
+		else
+			var:=lhs(L.coerce(k))
+			valor:=rhs(L.coerce(k))
+		lVar:=concat(lVar,[var])
+		lValor:=concat(lValor,[valor])
+		k:=k+1
+	Lista:=[lVar,lValor]
+
+
+listaValor(lista:List Polynomial AN):List AlgebraicNumber == 
+	k:=1
+	listaAux:=[]::List AlgebraicNumber
+	while (k<=maxIndex(lista)) repeat
+		valor:=lista.coerce(k)::AlgebraicNumber
+		listaAux:=concat(listaAux,[valor])
+		k:=k+1
+	retorno:=listaAux
+
+
+evaluar(s:List Polynomial AN,lista:List Polynomial AN,valores:List AN):List Polynomial AlgebraicNumber == 
+	b:=1
+	vect:=vectorDim(maxIndex(s))
+	N:=valores::List AlgebraicNumber
+	K:=lista::List Polynomial AlgebraicNumber
+	while b<=maxIndex(s) repeat
+		num:=s.coerce(b)
+		var:=vect.coerce(b)::Polynomial AlgebraicNumber
+		if totalDegree(num)=0 then
+			valorNum:=num::AlgebraicNumber
+			N:=concat(N,[valorNum])
+			K:=concat(K,[var])
+		b:=b+1
+	b:=1
+	l:=[]::List Polynomial AlgebraicNumber
+	while b<=maxIndex(s) repeat
+		valor:=eval(s.coerce(b),K,N)
+		l:=concat(l,valor)
+		b:=b+1
+	lista:=l
+
+
+autoV(E:List Equation Polynomial AN,n:PI):Vector Polynomial AlgebraicNumber ==
+	L:=first(solve(E))::List Equation Polynomial AlgebraicNumber
+	max:=maxIndex(L)
+	v:=vectorDim(n)
+	s:=[]::List Polynomial AlgebraicNumber
+	e:=1
+	while e<=n repeat
+		vpol:=v.coerce(e)::Polynomial AlgebraicNumber
+		valor:=sigElemPol(E,vpol)
+		s:=concat(s,[valor])
+	      	e:=e+1
+	listaParaEvaluar:=listaEval(L)
+	listaValores:=listaValor(listaParaEvaluar.2)
+	vec:=evaluar(s,listaParaEvaluar.1,listaValores)
+	sol:=vector(vec)::Vector Polynomial AlgebraicNumber
+
+
+autoVector(M:Matrix AN):List Vector Polynomial AlgebraicNumber ==
+	n:=nrows(M)::PositiveInteger
+	m:=1
+	r:=listaAutovalores(M)
+	ListaSol:=[]::List Vector Polynomial AlgebraicNumber
+	while m<=n repeat
+	      	E:=ecuacionAutovalor(M,r.coerce(m))
+	      	v:=autoV(E,n)
+	      	ListaSol:=concat(ListaSol,[v])
+	      	m:=m+1
+	Solucion:=ListaSol::List Vector Polynomial AlgebraicNumber

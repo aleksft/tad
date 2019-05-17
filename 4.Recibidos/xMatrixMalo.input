@@ -1,0 +1,4 @@
+identMatrix(n:Integer):Matrix AN == (scalarMatrix(1)$SquareMatrix(n,AN))
+xMatrix(M:Matrix AN):Matrix Polynomial AN == x*identMatrix(ncols(M)::Integer)-M
+
+

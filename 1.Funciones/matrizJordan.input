@@ -1,0 +1,158 @@
+IMatrix(n:PI):Matrix AlgebraicNumber == (scalarMatrix(1)$SquareMatrix(n,AN))
+
+
+xMatrix(M:Matrix AN,x:Symbol):Matrix Polynomial AlgebraicNumber == 
+	n:=ncols(M)
+	xMatrix(M,x,n)
+
+
+xMatrix(M:Matrix AN,x:Symbol,n:PI):Matrix Polynomial AlgebraicNumber == x*IMatrix(n)-M
+
+
+xMatrixAut(M:Matrix AN,valor:AN):Matrix AlgebraicNumber == 
+	n:=ncols(M)
+	valor*IMatrix(n)-M
+
+
+xMatrixAut(M:Matrix AN,valor:AN,n:PI):Matrix AlgebraicNumber == valor*IMatrix(n)-M
+
+
+vectorDim(n:PI):Vector Polynomial AlgebraicNumber ==
+	v:=[x0,x1,x2,x3,x4,x5,x6,x7,x8,x9]
+	v:=reverse!(last(reverse!(v),n))
+	t:=vector(v)::Vector Polynomial AlgebraicNumber
+
+
+matrixDim(n:PI):Matrix Polynomial AlgebraicNumber == 
+	t:=vectorDim(n)::Matrix Polynomial AlgebraicNumber
+
+
+polinomioCaracteristico(M:Matrix AN):Polynomial AlgebraicNumber == 
+	n:=nrows(M)::PositiveInteger
+	B:=xMatrix(M,x,n)
+	d:=determinant(B)
+
+
+listaAutovalores(M:Matrix AN):List AlgebraicNumber ==
+	n:=nrows(M)::PositiveInteger
+	d:=polinomioCaracteristico(M)
+	f:=factors(factor(d))
+	m:=maxIndex(f)
+	listaAux:=[]::List AlgebraicNumber
+	k:=1
+	while k<=m repeat
+		pol:=f.coerce(k).factor
+		r:=rootsOf(pol)
+		listaAux:=concat(listaAux,r)
+		k:=k+1
+	resultado:=listaAux
+
+
+listaAutovaloresDistintos(M:Matrix AN):List AlgebraicNumber == 
+	r:=listaAutovalores(M)
+	listaAux:=[r.1]::List AlgebraicNumber
+	max:=maxIndex(r)
+	k:=1
+	while k<max repeat
+		k:=k+1
+		if not member?(r.coerce(k),listaAux) then
+			listaAux:=concat(listaAux,[r.coerce(k)])
+	listaRes:=listaAux
+
+
+multAlg(valor:AN,P:Polynomial AN):NonNegativeInteger == 
+	R:=P
+	Q:=differentiate(R,[x])
+	h:=1
+	while (eval(Q,[x],[valor])=0)and(not(zero?(Q))) repeat
+		R:=Q
+		Q:=differentiate(R,[x])
+		h:=h+1
+	ma:=h
+
+
+multiplicidadesAlgebraicas(listaAt:List AN,M:Matrix AN):List NonNegativeInteger == 
+	lista:=[]::List NonNegativeInteger
+	d:=polinomioCaracteristico(M)
+	k:=1
+	maxIn:=maxIndex(listaAt)
+	while k<=maxIn  repeat
+		ma:=multAlg(listaAt.coerce(k),d)
+		lista:=concat(lista,[ma])
+		k:=k+1
+	salLista:=lista
+
+
+multGeomAut(valor:AN,M:Matrix AN,mma:NNI):List List NonNegativeInteger == 
+	m:=nrows(M)
+	listaMG:=[0]::List NonNegativeInteger
+	I:=IMatrix(m)
+	B:=M-valor*I::Matrix AlgebraicNumber
+	mgk:=0
+	k:=1
+	while mgk~=mma repeat
+		mgk:=m-rank(B**k)
+		listaMG:=concat(listaMG,[mgk])
+		k:=k+1
+	resLista:=[listaMG]
+
+
+multiplicidadGeometricas(listaAtt:List AN,M:Matrix AN,mas:List NNI):List List NonNegativeInteger == 
+	listaMMG:=[]::List List NonNegativeInteger
+	listaAux:=[]::List NonNegativeInteger
+	maxIn:=maxIndex(listaAtt)
+	k:=1
+	while k<=maxIn repeat
+		listaAux:=multGeomAut(listaAtt.coerce(k),M,mas.coerce(k))
+		listaMMG:=concat(listaMMG,listaAux)
+		k:=k+1
+	salList:=listaMMG
+
+
+construirBase(M:Matrix AN,valor:AN,mgg:List NNI):List List AlgebraicNumber==
+	B:=xMatrixAut(M,valor)
+	mm:=maxIndex(mgg)-1
+	multG:=mgg.coerce(mm)
+	T1:=B**coerce(multG)
+	T2:=T1*B
+	sMax:=nullSpace(T2)::Set List AlgebraicNumber
+	sAnt:=nullSpace(T1)::Set List AlgebraicNumber
+	auxSet:=difference(sMax,sAnt)
+	listaBase:=parts(auxSet)
+	listaAux:=listaBase
+	mm:=mm+1
+	numV:=mgg.coerce(mm)
+	h:=maxIndex(listaBase)
+	while h<numV repeat
+		aux:=[listaAux.1]::Matrix AlgebraicNumber
+		aux:=transpose(aux)
+		listaAux:=delete(listaAux,1)
+		vec:=B*aux
+		vec:=transpose(vec)::List AlgebraicNumber
+		listaAux:=concat(listaAux,[vec])
+		listaBase:=concat(listaBase,[vec])
+		h:=h+1
+	listaSol:=listaBase
+
+
+matrizCambio(M:Matrix AN,r:List AN,mgs:List List NNI):Matrix AlgebraicNumber==
+	m:=maxIndex(r)
+	k:=1
+	base:=[]::List List AlgebraicNumber
+	while k<=m repeat
+		baseAut:=construirBase(M,r.coerce(k),mgs.coerce(k))
+		base:=concat(base,baseAut)
+		k:=k+1
+	base:=base::Matrix AlgebraicNumber
+	P:=transpose(base)
+
+
+jordan(M:Matrix AN):Record(J:Matrix AlgebraicNumber,P:Matrix AlgebraicNumber) == 
+	n:=nrows(M)
+	r:=listaAutovaloresDistintos(M)
+	mAs:=multiplicidadesAlgebraicas(r,M)
+	mGs:=multiplicidadGeometricas(r,M,mAs)
+	P:=matrizCambio(M,r,mGs)
+	invP:=inverse(P)
+	J:=invP*M*P
+	construct(J,P)

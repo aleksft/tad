@@ -1,0 +1,129 @@
+)abbrev domain ARES ArbolRes
+
+--Dominio del árbol de resolución
+ArbolRes : Exports == Implementation where 
+	 Exports == with
+	 	arbolRes:(Nodo) -> $
+		arbolResInsert:($,List $) -> $
+		hijos:$ -> List $
+		hojas:$ -> List Nodo
+		raiz:$ -> Nodo
+		listString:$ -> List String
+		string:$ -> String
+		coordenadasHojas:$ -> List List Expression AlgebraicNumber
+		insertarNodo:($,$,$,Nodo,Nodo,NonNegativeInteger) -> $
+		coerce:$ -> OutputForm
+
+	 Implementation == add
+	 	--Representación del árbol como un Tree Nodo
+		Rep:=Tree Nodo
+
+
+		--Constructor de la clase Arbol
+		arbolRes (n) == (tree(n)::Tree Nodo)::$
+
+
+		--Inserta los árboles en L como hijos en la raiz de A
+		arbolResInsert (A,L) == 
+		      Laux:=[]::List Tree Nodo
+		      ml:=maxIndex(L)
+		      k:=1
+		      while k<=ml repeat
+		            a1:=(L.coerce(k))
+			    Laux:=concat(Laux,[a1::Rep])
+			    k:=k+1
+		      setchildren!(A::Rep,Laux)
+
+
+		--Devuelve los hijos del árbol
+		hijos (A) == children(A::Rep)::List $
+
+
+		--Devuelve las hojas del árbol
+		hojas (A) == leaves(A::Rep)
+
+
+		--Devuelve la raiz del árbol
+		raiz (A) == value(A::Rep)
+
+
+		--Devuelve una lista de strings para formar el string del árbol(con parámetro)
+		listString (A) == 
+		      Lhijos:=hijos(A)
+		      r:=raiz(A)
+		      L:=[]::List String
+		      Lraiz:=[latex(r)]::List String
+		      strAux:="                                                                            "
+		      strDetras:="                                                                            "
+		      ml:=maxIndex(Lhijos)
+		      k:=1
+		      while k<=ml repeat
+		            H:=Lhijos.coerce(k)
+			    lisH:=listString(H)
+			    if k<ml then
+			          lisH:=concat(lisH,["                                                                                                                                                                                                                                  "])
+			    L:=concat(L,lisH)
+			    k:=k+1
+		      if ml>0 then
+			    L:=concat([strAux,"(",strDetras],L)
+			    L:=concat(L,[")"])
+		      L:=concat(Lraiz,L)
+
+
+		--Devuelve el string del árbol
+		string (A) == 
+		      L:=listString(A)
+		      str:=concat(L)
+
+
+		--Devuelve las coordenadas totales de las hojas
+		coordenadasHojas (A) ==
+		      Lhojas:=hojas(A)
+		      LExp:=[]::List List Expression AlgebraicNumber
+		      ml:=maxIndex(Lhojas)
+		      k:=1::Integer
+		      while k<=ml repeat
+		            n:=Lhojas.coerce(k)
+			    comp:=numComp(n)::Expression AlgebraicNumber
+		      	    listCoor:=coordenadas(n)
+			    listCoor:=concat([comp],listCoor)
+		      	    LExp:=concat(LExp,listCoor)
+		      	    k:=k+1
+		      listSol:=LExp
+
+
+		--Inserta el nuevo nodo en el árbol
+		insertarNodo (U,A,B,r,nA,bool) == 
+		      if not(bool=2) then
+	      	            nS:=raiz(U)
+	      	      	    c1:=componente(nA)
+	      	      	    c2:=componente(r)
+	      	      	    c3:=componente(nS)
+	      	      	    nc1:=numComp(nA)
+	      	      	    nc2:=numComp(r)
+	      	      	    nc3:=numComp(nS)
+	      	      	    if (c1=c2)and(nc1>0)and(nc1-nc2=1) then
+  	              	          Lchild:=hijos(B)
+	      	      	    	  Lchild:=concat(Lchild,[U])
+	      	      	    	  arbolResInsert(B,Lchild)
+	      	      	    	  A:=B
+			    else
+	              	          if (c1=c3)and(nc1>=0)and(nc2=nc3) then
+	      	      	    	        Lchild:=hijos(A)
+	      	      	    	  	Lchild2:=concat([arbolRes(nA)],hijos(U))
+	      	      	    	  	Lchild:=concat(Lchild,Lchild2)
+	      	      	    	  	arbolResInsert(A,Lchild)
+	      	      	    	  else
+		      	    	        Lchild:=hijos(A)
+	      	      	    	  	Lchild:=concat(Lchild,[U])
+	      	      	    	  	arbolResInsert(A,Lchild)
+		      else
+	      	            Lchild:=hijos(U)
+	      	      	    Lchild:=concat(Lchild,[A])
+	      	      	    arbolResInsert(U,Lchild)
+	      	      	    A:=U
+		      ArbSol:=A
+
+
+		--Devuelve el OutputForm del árbol
+		coerce (A) == string(A)::OutputForm

@@ -1,0 +1,238 @@
+IMatrix(n:NNI):Matrix AlgebraicNumber ==
+	l:=[]::List AlgebraicNumber
+	m:=1
+	while m<=n repeat
+		l:=concat(l,[1])
+		m:=m+1
+	I:=diagonalMatrix(l)::Matrix AlgebraicNumber
+
+
+valorAutovalor(valuee:AN,d:Polynomial AN):AlgebraicNumber == 
+	P:=eval(valuee,[eval(valuee)],[1/x])::Expression AlgebraicNumber
+	Q:=eval(inv(valuee),[eval(valuee)],[x])::Expression AlgebraicNumber
+	sol:=solve(P=Q)
+	aux:=0::AlgebraicNumber
+	h:=1
+	while (h<=maxIndex(sol))and(aux=0) repeat
+		valPol:=lhs(sol.coerce(h))::Polynomial AlgebraicNumber
+		if totalDegree(valPol)~=0 then
+			val:=rhs(sol.coerce(h))::AlgebraicNumber
+			if eval(d,[x],[val])=0 then
+				aux:=val
+		else
+			val:=lhs(sol.coerce(h))::AlgebraicNumber
+			if eval(d,[x],[val])=0 then
+				aux:=val
+		h:=h+1
+	retorno:=aux
+
+
+actualizar(r:List AN,k:NNI,valor:AN):List AlgebraicNumber == 
+	lista:=[]::List AlgebraicNumber
+	p:=1
+	while p<k repeat
+		lista:=concat(lista,[r.coerce(p)])
+		p:=p+1
+	lista:=concat(lista,[valor])
+	p:=p+1
+	while p<=maxIndex(r) repeat
+		valueLista:=eval(r.coerce(p),[r.coerce(k)],[valor])::AlgebraicNumber
+		lista:=concat(lista,[valueLista])
+		p:=p+1
+	listOut:=lista
+
+
+MatrixPolinomio(M:Matrix AN):Matrix Polynomial AlgebraicNumber == 
+	n:=nrows(M)
+	I:=IMatrix(n)
+	B:=M-x*I::Matrix Polynomial AlgebraicNumber
+
+
+MatrixAutovalor(M:Matrix AN,m:AN):Matrix AlgebraicNumber == 
+	n:=nrows(M)
+	I:=IMatrix(n)
+	B:=M-m*I::Matrix AlgebraicNumber
+
+
+polinomioCaracteristico(M:Matrix AN):Polynomial AlgebraicNumber == 
+	B:=MatrixPolinomio(M)
+	d:=determinant(B)
+
+
+listaAutovalores(M:Matrix AN):List AlgebraicNumber ==
+	n:=nrows(M)
+	d:=polinomioCaracteristico(M)
+	r:=rootsOf(d)
+	listaAux:=[]::List AlgebraicNumber
+	k:=1
+	j:=0
+	while k<n repeat
+		if (eval(d,[x],[0])=0)and(j=0) then
+			valor:=0::AlgebraicNumber
+			j:=j+1
+		else
+			valor:=valorAutovalor(r.coerce(k),d)
+		listaAux:=concat(listaAux,[valor])
+		r:=actualizar(r,k,valor)
+		k:=k+1
+	listaAux:=concat(listaAux,[r.coerce(k)])
+	resultado:=listaAux
+
+
+listaAutovaloresDistintos(M:Matrix AN):List AlgebraicNumber == 
+	r:=listaAutovalores(M)
+	listaAux:=[r.1]::List AlgebraicNumber
+	max:=maxIndex(r)
+	k:=1
+	while k<max repeat
+		k:=k+1
+		if not member?(r.coerce(k),listaAux) then
+			listaAux:=concat(listaAux,[r.coerce(k)])
+	listaRes:=listaAux
+
+
+multAlg(valor:AN,P:Polynomial AN):NonNegativeInteger == 
+	R:=P
+	Q:=differentiate(R,[x])
+	h:=1
+	while (eval(Q,[x],[valor])=0)and(not(zero?(Q))) repeat
+		R:=Q
+		Q:=differentiate(R,[x])
+		h:=h+1
+	ma:=h
+
+
+multiplicidadesAlgebraicas(listaAt:List AN,M:Matrix AN):List NonNegativeInteger == 
+	lista:=[]::List NonNegativeInteger
+	d:=polinomioCaracteristico(M)
+	k:=1
+	maxIn:=maxIndex(listaAt)
+	while k<=maxIn  repeat
+		ma:=multAlg(listaAt.coerce(k),d)
+		lista:=concat(lista,[ma])
+		k:=k+1
+	salLista:=lista
+
+
+multGeomAut(valor:AN,M:Matrix AN,mma:NNI):List List NonNegativeInteger == 
+	m:=nrows(M)
+	listaMG:=[0]::List NonNegativeInteger
+	I:=IMatrix(m)
+	B:=M-valor*I::Matrix AlgebraicNumber
+	mgk:=0
+	k:=1
+	while mgk~=mma repeat
+		mgk:=m-rank(B**k)
+		listaMG:=concat(listaMG,[mgk])
+		k:=k+1
+	resLista:=[listaMG]
+
+
+multiplicidadGeometricas(listaAtt:List AN,M:Matrix AN,mas:List NNI):List List NonNegativeInteger == 
+	listaMMG:=[]::List List NonNegativeInteger
+	listaAux:=[]::List NonNegativeInteger
+	maxIn:=maxIndex(listaAtt)
+	k:=1
+	while k<=maxIn repeat
+		listaAux:=multGeomAut(listaAtt.coerce(k),M,mas.coerce(k))
+		listaMMG:=concat(listaMMG,listaAux)
+		k:=k+1
+	salList:=listaMMG
+
+
+listaZeros(n:NNI):List AlgebraicNumber == 
+	param:=1
+	l:=[]::List AlgebraicNumber
+	while param<=n repeat
+		l:=concat(l,[0])
+		param:=param+1
+	salida:=l
+
+
+filaIesima(autovalor:AN,flBloque:NNI,abFil:NNI,n:NNI):List AlgebraicNumber == 
+	cerosDespues:=n-abFil
+	listaPost:=listaZeros(cerosDespues)
+	if flBloque~=1 then
+		cerosAntes:=abFil-2
+		filaI:=listaZeros(cerosAntes)
+		listaAutovalor:=concat([1],[autovalor])
+	else
+		cerosAntes:=abFil-1
+		filaI:=listaZeros(cerosAntes)
+		listaAutovalor:=[autovalor]
+	filaI:=concat(filaI,listaAutovalor)
+	filaI:=concat(filaI,listaPost)
+
+
+bloqueAutMg(valorMg:NNI,autovalor:AN,abFila:NNI,n:NNI):List List AlgebraicNumber == 
+	q:=1
+	listaFlBl:=[]::List List AlgebraicNumber
+	filaBloque:=1
+	while filaBloque<=valorMg repeat
+		fila:=filaIesima(autovalor,filaBloque,abFila,n)
+		listaFlBl:=concat(listaFlBl,[fila])
+		filaBloque:=filaBloque+1
+	listaFinal:=listaFlBl
+
+
+bloqueAut(mmg:List NNI,valor:AN,absFil:NNI,n:NNI):Record(bloque:List List AN,fila:NNI) == 
+	listaBloque:=[]::List List AlgebraicNumber
+	maxBlock:=maxIndex(mmg)
+	h:=1
+	filas:=absFil
+	while h<=maxBlock repeat
+		bloqueAut:=bloqueAutMg(mmg.coerce(h),valor,filas,n)
+		listaBloque:=concat(listaBloque,bloqueAut)
+		filas:=filas+mmg.coerce(h)
+		h:=h+1
+	listaFin:=construct(listaBloque,filas)::Record(bloque:List List AN,fila:NNI)
+
+
+calculoMatriz(mg:List List NNI,listAut:List AN,n:NNI):List List AlgebraicNumber == 
+	listaFilas:=[]::List List AlgebraicNumber
+	maximoIndice:=maxIndex(listAut)
+	absFila:=1
+	k:=1
+	while k<=maximoIndice repeat
+		listaMgAut:=mg.coerce(k)
+		autoVal:=listAut.coerce(k)
+		regBloqueAut:=bloqueAut(listaMgAut,autoVal,absFila,n)
+		listaBloqueAut:=regBloqueAut.bloque
+		absFila:=regBloqueAut.fila
+		k:=k+1
+		listaFilas:=concat(listaFilas,listaBloqueAut)
+	listaSol:=listaFilas
+
+
+diferencias(valoresMg:List NNI):List List NonNegativeInteger == 
+	listaSol:=[]::List NonNegativeInteger
+	maxLista:=maxIndex(valoresMg)-1
+	h:=1
+	while h<=maxLista repeat
+		valorEval:=valoresMg.coerce(h+1)-valoresMg.coerce(h)
+		listaEval:=[valorEval]
+		listaSol:=concat(listaSol,listaEval)
+		h:=h+1
+	salida:=[listaSol]
+
+
+diferenciasMgs(mgses:List List NNI):List List NonNegativeInteger == 
+	diferMgs:=[]::List List NonNegativeInteger
+	b:=1
+	maxiInd:=maxIndex(mgses)
+	while b<=maxiInd repeat
+		mges:=mgses.coerce(b)::List NonNegativeInteger
+		difMg:=diferencias(mges)
+		diferMgs:=concat(diferMgs,difMg)
+		b:=b+1
+	exitMg:=diferMgs
+
+
+jordan(M:Matrix AN):Matrix AlgebraicNumber == 
+	n:=nrows(M)
+	r:=listaAutovaloresDistintos(M)
+	mAs:=multiplicidadesAlgebraicas(r,M)
+	mGs:=multiplicidadGeometricas(r,M,mAs)
+	mmGs:=diferenciasMgs(mGs)
+	listaMatriz:=calculoMatriz(mmGs,r,n)
+	J:=matrix(listaMatriz)

@@ -1,0 +1,358 @@
+----FUNCIONES PARA LA RESOLUCIÓN DE SINGULARIDADES
+
+--Calcula la lista de números algebráicos
+listaNumerosAlgebraicos(Lp:List Point AN,n:Nodo):List AlgebraicNumber == 
+	L1:=lista(n)
+	mlp:=maxIndex(Lp)
+	klp:=1
+	while klp<=mlp repeat
+	      pp:=Lp.coerce(klp)
+	      L1:=concat(L1,entries(pp))
+	      klp:=klp+1
+	removeDuplicates!(L1)
+	solList:=L1
+
+
+--Cambia las coordenadas para que el punto singular sea (0,0)
+cambiaCoordenadas(f:Polynomial AN,punt:Point AN):Polynomial AlgebraicNumber == 
+	p:=entries(punt)
+	P:=eval(f,[x,y],[x+p.1,y+p.2])
+
+
+--Calcula la lista de los monomios del polinomio sin coneficientes
+listMonomial(f:Polynomial AN):List Polynomial AlgebraicNumber == 
+	L:=monomials(f)
+	C:=coefficients(f)
+	lista:=[]::List Polynomial AlgebraicNumber
+	m:=maxIndex(L)
+	k:=1
+	while k<=m repeat
+	      val:=L.coerce(k)
+	      cof:=C.coerce(k)
+	      pol:=(val/cof)::Polynomial AlgebraicNumber
+	      lista:=concat(lista,[pol])
+	      k:=k+1
+	listaMon:=lista
+
+
+--Calcula la carta que vamos a usar
+calcularCarta(f:Polynomial AN):NonNegativeInteger == 
+	L:=listMonomial(f)
+	m:=maxIndex(L)
+	k:=1
+	Lsum:=[]::List NonNegativeInteger
+	while k<=m repeat
+	      P:=L.coerce(k)
+	      valx:=degree(P,x)
+	      valy:=degree(P,y)
+	      valsum:=valx+valy
+	      Lsum:=concat(Lsum,[valsum])
+	      k:=k+1
+	Lsum:=sort(Lsum)
+	min:=first(Lsum)
+	P:=y**coerce(min)
+	if member?(P,L) then
+	      sol:=0
+	else
+	      sol:=1
+	grX:=degree(f,x)
+	if (sol=0)and(grX=0) then
+	      sol:=1
+	carta:=sol
+
+
+--Aplica la carta que necesitamos
+carta(f:POLY AN,m:NNI):Record(Pol:Polynomial AlgebraicNumber,s:Symbol) == 
+	n:=calcularCarta(f)
+	if n=0 then
+	      comp:=x::Symbol
+	      Paux:=eval(f,[x,y],[x,x*y])
+	else
+	      comp:=y::Symbol
+	      Paux:=eval(f,[x,y],[x*y,y])
+	Q:=(comp**m)::Polynomial AlgebraicNumber
+	P:=(Paux/Q)::Polynomial AlgebraicNumber
+	sol:=construct(P,comp)
+
+
+--Calcula la multiplicidad de los puntos en la curva
+calcularMult(f:Polynomial AN,punt:Point AN):NonNegativeInteger == 
+	p:=entries(punt)
+	listaD:=[f]
+	evaluacion:=0
+	k:=0
+	while evaluacion=0 repeat
+	      P:=first(listaD)::Polynomial AlgebraicNumber
+	      evaluacion:=eval(P,[x,y],p)
+	      Px:=differentiate(P,x)
+	      Py:=differentiate(P,y)
+	      listaD:=delete(listaD,1)
+	      m:=maxIndex(listaD)+1
+	      listaD:=insert([Px,Py],listaD,m)
+	      k:=k+1
+	h:=0
+	while 2**coerce(h)<=k repeat
+	      h:=h+1
+	mult:=h-1
+
+
+--Calcula la multiplicidad del (0,0) en la curva devolviendo 0 si no está en la curva
+multiplicidadCero(f:Polynomial AN):NonNegativeInteger == 
+	evaluacion:=eval(f,[x,y],[0,0])
+	if evaluacion=0 then
+	      p:=point([0,0])::Point AlgebraicNumber
+	      valor:=calcularMult(f,p)
+	else
+	      valor:=0
+	sol:=valor
+
+
+--Comprueba si el punto obtenido es un punto en que hay que hacer una explosion
+explosion(f:POLY AN,p:Point AN,m:Nodo,Paux:POLY AN,s:Symbol):NonNegativeInteger == 
+	valor:=0
+	if calcularMult(f,p)>1 then
+	      valor:=1
+	else
+	      mt:=calcularMult(Paux,p)
+	      c:=componente(m)
+	      bool:=not(c=s)and(p=point([0,0]))
+	      if (mt>1)or(bool) then
+	            valor:=1
+	sol:=valor
+
+
+--Comprueba si hay que volver a hacer una explosión
+aplicacion(g:Polynomial AN,n:Nodo,m:Nodo):NonNegativeInteger == 
+	c1:=componente(n)
+	c2:=componente(m)
+	i:=numComp(m)
+	if ((not(c1=c2))and(i>=0)) then 
+	      P:=eval(g,[x],[0])
+	      Q:=eval(g,[y],[0])
+	      m1:=multiplicidadCero(P)
+	      m2:=multiplicidadCero(Q)
+	      if m1+m2>1 then
+	      	    bool:=2
+	      else
+	            bool:=0
+	else
+	      bool:=0
+	valor:=bool
+
+
+--Calcular los puntos correspondientes a una coordenada 0 y la otra obtenida de una lista
+puntos(L:List AN,s:Symbol,m:Nodo,f:POLY AN,Paux:POLY AN):List Point AlgebraicNumber == 
+	ml:=maxIndex(L)
+	k:=1
+	LAux:=[]::List Point AlgebraicNumber
+	while k<=ml repeat
+	      c:=L.coerce(k)
+	      if s=(x::Symbol) then
+	            p:=point([0,c])::Point AlgebraicNumber
+	      else
+	            p:=point([c,0])::Point AlgebraicNumber
+	      if explosion(f,p,m,Paux,s)=1 then
+	            LAux:=concat(LAux,[p])
+	      k:=k+1
+	LSol:=LAux
+
+
+--Calcular los puntos en los que se va a hacer la explosion
+puntosExplosion(f:Polynomial AN,n:Nodo,m:Nodo):List Point AlgebraicNumber == 
+	LExp:=[]::List Point AlgebraicNumber
+	if not(numComp(n)=-1) then
+	      c:=componente(n)
+	      Paux:=eval(f,c,0)
+	      if totalDegree(Paux)>0 then
+	            PReg:=factors(factor(Paux,lista(n)))
+	      	    mR:=maxIndex(PReg)
+	      	    kR:=1
+	      	    while kR<=mR repeat
+	                  Reg:=PReg.coerce(kR)
+		    	  P:=Reg.factor
+		    	  LCoor:=rootsOf(P)
+		    	  LExp:=puntos(LCoor,c,m,f,Paux)
+		    	  kR:=kR+1
+	else
+	      if multiplicidadCero(f)>1 then
+	            LExp:=[point([0,0])]
+	removeDuplicates!(LExp)
+
+
+--Resuelve las singularidades de la curva
+singularidades(f:Polynomial AN,cont:INT,r:Nodo,ra:Nodo,bool:NNI):ArbolRes == 
+	Lpuntos:=puntosExplosion(f,r,ra)
+	LNumAlg:=listaNumerosAlgebraicos(Lpuntos,r)
+	m:=maxIndex(Lpuntos)
+	k:=1
+	A:=arbolRes(r)
+	B:=arbolRes(ra)
+	while k<=m repeat
+	      cont:=cont+1
+	      p:=Lpuntos.coerce(k)
+	      f1:=cambiaCoordenadas(f,p)
+	      mult:=multiplicidadCero(f1)
+	      solCarta:=carta(f1,mult)
+	      g:=solCarta.Pol
+	      comp:=solCarta.s
+	      LExp:=calcularCoordenadas(r,p,comp)
+	      nA:=nodo(cont,comp,mult,g,p,LNumAlg,LExp)
+	      boolnA:=aplicacion(g,nA,r)
+	      U:=singularidades(g,cont,nA,r,boolnA)
+	      A:=insertarNodo(U,A,B,r,nA,bool)
+	      k:=k+1
+	solT:=A
+
+
+--Función principal
+resolucion(f:Polynomial AN):ArbolRes == 
+	p0:=point([0,0])::Point AlgebraicNumber
+	coor1:=x::Expression AlgebraicNumber
+	coor2:=y::Expression AlgebraicNumber
+	LExp:=[coor1,coor2]
+	r:=nodo(-1,x,0,f,p0,[],LExp)
+	K:=singularidades(f,-1,r,r,0)
+
+
+--Función principal con todos los datos
+resolucionTotal(f:POLY AN):Record(Ar:ArbolRes,LCoor:List List Expression AlgebraicNumber) == 
+	H:=resolucion(f)
+	LE:=coordenadasHojas(H)
+	sol:=construct(H,LE)::Record(Ar:ArbolRes,LCoor:List List Expression AlgebraicNumber)
+
+
+
+
+
+----OTRAS FUNCIONES
+
+--Recoloca las coordenadas de un punto
+orderP(listaVar:List Symbol,listAux:List AN):Point AlgebraicNumber == 
+	var:=sort(listaVar)
+	m:=maxIndex(listaVar)
+	k:=1
+	listSol:=[]::List AlgebraicNumber
+	while k<=m repeat
+	      v:=var.coerce(k)
+	      pos:=position(v,listaVar)
+	      val:=listAux.coerce(pos)
+  	      listSol:=concat(listSol,[val])
+	      k:=k+1
+	sol:=point(listSol)::Point AlgebraicNumber
+
+
+--Reconstruye un polinomio a partir de sus factores
+reconstruirPol(Reg:List Record(factor:Polynomial AN,exponent:INT)):Polynomial AlgebraicNumber == 
+	m:=maxIndex(Reg)
+	g:=1::Polynomial AlgebraicNumber
+	k:=1
+	while k<=m repeat
+	      fac:=(Reg.coerce(k)).factor
+   	      exp:=(Reg.coerce(k)).exponent::NonNegativeInteger
+	      g:=g*(fac**exp)
+	      k:=k+1
+	Psol:=g
+
+
+--Calcula los puntos singulares que no son racionales
+listaSingulares(Lp:List List Equation POLY AN):List List Equation Polynomial AlgebraicNumber == 
+	mL:=maxIndex(Lp)
+	if mL>0 then
+	      elem:=Lp.1
+	      if empty?(elem) then
+	            mL:=0
+	t:=1
+	listaFinal:=[]::List List Equation Polynomial AlgebraicNumber
+	while t<=mL repeat
+	      L:=Lp.coerce(t)
+	      P1:=lhs(L.1)-rhs(L.1)
+	      P2:=lhs(L.2)-rhs(L.2)
+	      r1:=rootsOf(P1)
+	      r2:=rootsOf(P2)
+	      v1:=variables(P1)
+	      v2:=variables(P2)
+	      m1:=maxIndex(r1)
+	      m2:=maxIndex(r2)
+	      t1:=1
+	      listaPuntos:=[]::List List Equation Polynomial AlgebraicNumber
+	      while t1<=m1 repeat
+	      	    q1:=r1.coerce(t1)
+	      	    var1:=v1.1::Symbol
+	      	    t2:=1
+	      	    listaP1:=[]::List List Equation Polynomial AlgebraicNumber
+	      	    while t2<=m2 repeat
+	      	    	  q2:=r2.coerce(t2)
+	      	    	  var2:=v2.1::Symbol
+	      	    	  listaP1:=concat(listaP1,[var1=q1,var2=q2])
+	      	    	  t2:=t2+1
+	            listaPuntos:=concat(listaPuntos,listaP1)
+	      	    t1:=t1+1
+	      listaFinal:=concat(listaFinal,listaPuntos)
+	      t:=t+1
+	listaSol:=listaFinal
+
+
+--Devuelve el punto si es singular para la curva
+sing(L:List Equation Polynomial AN,f:Polynomial AN):List Point AlgebraicNumber ==
+	var:=variables(f)
+	listAux:=[]::List AlgebraicNumber
+	listaVar:=[]::List Symbol
+	k:=1
+	m:=maxIndex(L)
+	while k<=m repeat
+	      v:=rhs(L.coerce(k))
+	      if member?(v,var) then
+	            listaVar:=concat([v],listaVar)
+	            listAux:=concat([lhs(L.coerce(k))],listAux)
+	      else
+		    v:=lhs(L.coerce(k))
+		    listaVar:=concat([v],listaVar)
+		    listAux:=concat([rhs(L.coerce(k))],listAux)
+	      k:=k+1
+	listSol:=[orderP(listaVar,listAux)]
+
+
+--Calcula los puntos singulares, no funciona bien porque solve no funciona en algunos casos
+pSingulares(f:Polynomial AN):List Point AlgebraicNumber == 
+	fx:=differentiate(f,x)
+	fy:=differentiate(f,y)
+	Eq:=[fx=0,fy=0,f=0]
+	LEq:=solve(Eq)::List List Equation Polynomial AlgebraicNumber
+	Lsol:=listaSingulares(LEq)
+	Laux:=[]::List Point AlgebraicNumber
+	m:=maxIndex(Lsol)
+	k:=1
+	while k<=m repeat
+	      L:=Lsol.coerce(k)
+	      puntos:=sing(L,f)
+	      Laux:=concat(Laux,puntos)
+	      k:=k+1
+	emptyP:=point([])::Point AlgebraicNumber
+	while member?(emptyP,Laux) repeat
+	      posVacio:=position(emptyP,Laux)
+	      Laux:=delete(Laux,posVacio)
+     	LSolucion:=Laux
+
+
+--Calcula los puntos en los que hay que hay que hacer la explosion a partir de "pSingulares"
+puntosDeExplosion(f:Polynomial AN,n:Nodo,m:Nodo):List Point AlgebraicNumber == 
+	Lsing:=pSingulares(f)
+	Laux:=[]::List Point AlgebraicNumber
+	if not(numComp(n)=-1) then
+	      c1:=componente(m)
+	      c2:=componente(n)
+	      if not(c1=c2) then
+	      	    Paux1:=eval(f,c1,0)
+		    Paux2:=eval(f,c2,0)
+		    Laux1:=pSingulares(Paux1)
+		    Laux2:=pSingulares(Paux2)
+		    Laux:=concat(Laux1,Laux2)
+		    enCero:=eval(f,[x,y],[0,0])
+		    if enCero=0 then
+		          puntoCero:=point([0,0])::Point AlgebraicNumber
+			  Laux:=concat(Laux,puntoCero)
+	      else
+		    Paux:=eval(f,c1,0)
+		    Laux:=pSingulares(Paux)
+	LExp:=concat(Lsing,Laux)
+	removeDuplicates!(LExp)
